@@ -3,7 +3,9 @@ const moment = require("moment");
 require("moment/locale/ru");
 moment.locale("ru");
 
-const token = "8416403958:AAHaxJfv6Qh04VruSByn2Gu1w4PSr0VBeOQ"; 
+const token = process.env.TOKEN;
+const adminId = parseInt(process.env.ADMIN_ID);
+const groupChatId = parseInt(process.env.GROUP_CHAT_ID);
 const bot = new TelegramBot(token, { polling: true });
 
 // ===== Временное хранилище расписания =====
@@ -11,10 +13,6 @@ let schedule = {
   odd: {},
   even: {}
 };
-
-// ===== Настройки =====
-const adminId = 6778917708; // <-- твой Telegram ID
-const groupChatId = -1002914595083; // <-- ID группы для авто-рассылки
 
 // ===== Проверка недели =====
 function isOddWeek() {
