@@ -7,7 +7,10 @@ const token = process.env.TOKEN;
 const adminId = parseInt(process.env.ADMIN_ID);
 const groupChatId = parseInt(process.env.GROUP_CHAT_ID);
 const bot = new TelegramBot(token, { polling: true });
-
+// ===== Каждую минуту отправка в группу, чтобы бот не простаивал =====
+setInterval(() => {
+  bot.sendMessage(groupChatId, "🤖 Бот активен и следит за расписанием!");
+}, 60 * 1000); // 60 * 1000 = 1 минута
 // ===== Временное хранилище расписания =====
 let schedule = {
   odd: {},
