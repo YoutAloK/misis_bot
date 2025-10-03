@@ -108,7 +108,6 @@ bot.onText(/\/расписание/, (msg) => {
 // ===== Сообщения =====
 bot.on("message", (msg) => {
   const chatId = msg.chat.id;
-  const text = msg.text ? msg.text.toLowerCase() : "";
   const isAdmin = msg.from.id === adminId;
 
   // Главное меню кнопки
@@ -130,22 +129,6 @@ bot.on("message", (msg) => {
     return;
   }
 
-  // Добавление пары
-  if (msg.text === "➕ Добавить пару") {
-    bot.sendMessage(chatId, "Выбери день недели:", {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "Понедельник", callback_data: "add_Понедельник" }],
-          [{ text: "Вторник", callback_data: "add_Вторник" }],
-          [{ text: "Среда", callback_data: "add_Среда" }],
-          [{ text: "Четверг", callback_data: "add_Четверг" }],
-          [{ text: "Пятница", callback_data: "add_Пятница" }],
-          [{ text: "Суббота", callback_data: "add_Суббота" }]
-        ]
-      }
-    });
-  }
-
   if (msg.text === "✏️ Изменить пару") {
     bot.sendMessage(chatId, "Формат изменения: день; номер пары; новое значение; odd/even");
   }
@@ -154,7 +137,7 @@ bot.on("message", (msg) => {
   }
 });
 
-// ===== Inline кнопки для добавления пары =====
+// ===== Inline кнопки для добавления пары (пошаговый ввод) =====
 bot.on("callback_query", (query) => {
   const chatId = query.message.chat.id;
   const userId = query.from.id;
@@ -165,24 +148,48 @@ bot.on("callback_query", (query) => {
 
   if (query.data.startsWith("add_")) {
     const day = query.data.replace("add_", "");
-    bot.sendMessage(chatId, `✍️ Введи пару для ${day}.\nФормат: "Название пары ВРЕМЯ odd/even"`);
+    const pairData = {};
 
-    bot.once("message", (reply) => {
-      const parts = reply.text.split(" ");
-      const type = parts.pop().toLowerCase();
-      const weekType = type === "even" ? "even" : "odd";
-      const pair = parts.join(" ");
+    // Шаг 1: название предмета
+    bot.sendMessage(chatId, `✍️ Введите название предмета для ${day}:`);
+    bot.once("message", (msg1) => {
+      pairData.name = msg1.text;
 
-      if (!schedule[weekType][day]) schedule[weekType][day] = [];
-      schedule[weekType][day].push(pair);
+      // Шаг 2: номер пары
+      bot.sendMessage(chatId, `Введите номер пары для ${day} (числом):`);
+      bot.once("message", (msg2) => {
+        pairData.number = msg2.text;
 
-      bot.sendMessage(chatId, `✅ Добавлено в ${day} (${weekType} неделя): ${pair}`);
-      mainMenu(chatId, true);
+        // Шаг 3: время
+        bot.sendMessage(chatId, `Введите время пары для ${day} (пример: 10:00):`);
+        bot.once("message", (msg3) => {
+          pairData.time = msg3.text;
+
+          // Шаг 4: неделя
+          bot.sendMessage(chatId, `Введите тип недели (odd/нечет или even/чет):`);
+          bot.once("message", (msg4) => {
+            const weekType = (msg4.text.toLowerCase() === "even" || msg4.text.toLowerCase() === "чет") ? "even" : "odd";
+
+            const pairText = `${pairData.name} (${pairData.time})`;
+
+            if (!schedule[weekType][day]) schedule[weekType][day] = [];
+            const index = parseInt(pairData.number) - 1;
+            if (!isNaN(index) && index >= 0) {
+              schedule[weekType][day].splice(index, 0, pairText);
+            } else {
+              schedule[weekType][day].push(pairText);
+            }
+
+            bot.sendMessage(chatId, `✅ Добавлено в ${day} (${weekType} неделя): ${pairText}`);
+            mainMenu(chatId, true);
+          });
+        });
+      });
     });
   }
 });
 
-// ===== Авто-рассылка расписания утром в основную группу =====
+// ===== Авто-рассылка расписания утром =====
 const scheduleDaily = () => {
   const weekType = isOddWeek() ? "odd" : "even";
   const weekName = isOddWeek() ? "Нечётная" : "Чётная";
