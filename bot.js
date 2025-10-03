@@ -5,15 +5,21 @@ moment.locale("ru");
 
 const token = process.env.TOKEN;
 const adminId = parseInt(process.env.ADMIN_ID);
-const groupChatId = parseInt(process.env.GROUP_CHAT_ID);
-const bot = new TelegramBot(token, { polling: true });
-// ===== Каждую минуту отправка в группу, чтобы бот не простаивал =====
-const targetGroupId = -4815152987; // ID вашей группы
+const groupChatId = parseInt(process.env.GROUP_CHAT_ID); // основная группа
+const targetGroupId = -4815152987; // группа для автопинга каждую минуту
 
-// ===== Авто-пинг каждые 1 минуту =====
+const bot = new TelegramBot(token, { polling: true });
+
+// ===== Временное хранилище расписания =====
+let schedule = {
+  odd: {},
+  even: {}
+};
+
+// ===== Авто-пинг каждую минуту в targetGroupId =====
 setInterval(() => {
   bot.sendMessage(targetGroupId, "🤖 Бот активен и следит за расписанием!");
-}, 60 * 1000); // 60 секунд = 1 минута
+}, 60 * 1000);
 
 // ===== Проверка недели =====
 function isOddWeek() {
@@ -53,12 +59,12 @@ bot.onText(/\/start/, (msg) => {
   mainMenu(msg.chat.id, isAdmin);
 });
 
-// ===== /myid - узнать свой Telegram ID =====
+// ===== /myid =====
 bot.onText(/\/myid/, (msg) => {
   bot.sendMessage(msg.chat.id, `🆔 Твой Telegram ID: ${msg.from.id}`);
 });
 
-// ===== /groupid - узнать ID группы =====
+// ===== /groupid =====
 bot.onText(/\/groupid/, (msg) => {
   if (msg.chat.type === "group" || msg.chat.type === "supergroup") {
     bot.sendMessage(msg.chat.id, `🆔 ID этой группы: ${msg.chat.id}`);
@@ -160,17 +166,16 @@ bot.on("callback_query", (query) => {
   }
 });
 
-// ===== Авто-рассылка расписания утром =====
+// ===== Авто-рассылка расписания утром в основную группу =====
 const scheduleDaily = () => {
   const weekType = isOddWeek() ? "odd" : "even";
   const weekName = isOddWeek() ? "Нечётная" : "Чётная";
 
   const today = moment().format("dddd");
-
   let text = `☀️ Доброе утро! Расписание на сегодня (${weekName} неделя):\n\n`;
   text += getDaySchedule(today, weekType);
 
-  bot.sendMessage(groupChatId, text);
+  bot.sendMessage(groupChatId, text); // рассылка только в основной группе
 };
 
 // Таймер на 8:00 утра
