@@ -6,17 +6,14 @@ moment.locale("ru");
 const token = process.env.TOKEN;
 const adminId = parseInt(process.env.ADMIN_ID);
 const groupChatId = parseInt(process.env.GROUP_CHAT_ID);
-const tester = -4815152987;
 const bot = new TelegramBot(token, { polling: true });
 // ===== Каждую минуту отправка в группу, чтобы бот не простаивал =====
+const targetGroupId = -4815152987; // ID вашей группы
+
+// ===== Авто-пинг каждые 1 минуту =====
 setInterval(() => {
-  bot.sendMessage(tester, "🤖 Бот активен и следит за расписанием!");
-}, 60 * 1000); // 60 * 1000 = 1 минута
-// ===== Временное хранилище расписания =====
-let schedule = {
-  odd: {},
-  even: {}
-};
+  bot.sendMessage(targetGroupId, "🤖 Бот активен и следит за расписанием!");
+}, 60 * 1000); // 60 секунд = 1 минута
 
 // ===== Проверка недели =====
 function isOddWeek() {
