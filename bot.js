@@ -5,8 +5,8 @@ moment.locale("ru");
 
 const token = process.env.TOKEN;
 const adminId = parseInt(process.env.ADMIN_ID);
-const groupChatId = parseInt(process.env.GROUP_CHAT_ID); // основная группа
-const targetGroupId = -4815152987; // группа для автопинга каждую минуту
+const groupChatId = parseInt(process.env.GROUP_CHAT_ID); // основная группа для расписания
+const targetGroupId = -4815152987; // группа для автопинга
 
 const bot = new TelegramBot(token, { polling: true });
 
@@ -73,41 +73,46 @@ bot.onText(/\/groupid/, (msg) => {
   }
 });
 
+// ===== /расписание =====
+bot.onText(/\/расписание/, (msg) => {
+  const chatId = msg.chat.id;
+
+  // Проверяем, что команда пришла из основной группы
+  if (chatId !== groupChatId) return;
+
+  const weekType = isOddWeek() ? "odd" : "even";
+  const weekName = isOddWeek() ? "Нечётная" : "Чётная";
+
+  const today = moment().format("dddd");
+  const tomorrow = moment().add(1, "days").format("dddd");
+
+  let reply = `📅 Расписание (${weekName} неделя)\n\n`;
+  reply += "🟢 Сегодня:\n" + getDaySchedule(today, weekType) + "\n";
+  reply += "🟡 Завтра:\n" + getDaySchedule(tomorrow, weekType);
+
+  bot.sendMessage(chatId, reply);
+});
+
 // ===== Сообщения =====
 bot.on("message", (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text ? msg.text.toLowerCase() : "";
   const isAdmin = msg.from.id === adminId;
 
-  // Ответ на "расписание"
-  if (text.includes("расписание")) {
-    const weekType = isOddWeek() ? "odd" : "even";
-    const weekName = isOddWeek() ? "Нечётная" : "Чётная";
-
-    const today = moment().format("dddd");
-    const tomorrow = moment().add(1, "days").format("dddd");
-
-    let reply = `📅 Расписание (${weekName} неделя)\n\n`;
-    reply += "🟢 Сегодня:\n" + getDaySchedule(today, weekType) + "\n";
-    reply += "🟡 Завтра:\n" + getDaySchedule(tomorrow, weekType);
-
-    bot.sendMessage(chatId, reply);
-  }
-
   // Главное меню кнопки
   if (msg.text === "📅 Показать расписание") {
     const weekType = isOddWeek() ? "odd" : "even";
     const weekName = isOddWeek() ? "Нечётная" : "Чётная";
 
-    let text = `📅 Расписание (${weekName} неделя):\n\n`;
+    let textReply = `📅 Расписание (${weekName} неделя):\n\n`;
     const days = ["Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
     days.forEach(day => {
-      text += getDaySchedule(day, weekType) + "\n";
+      textReply += getDaySchedule(day, weekType) + "\n";
     });
-    bot.sendMessage(chatId, text);
+    bot.sendMessage(chatId, textReply);
   }
 
-  // Проверка прав администратора для действий
+  // Проверка прав администратора
   if (!isAdmin && ["➕ Добавить пару","✏️ Изменить пару","❌ Удалить пару"].includes(msg.text)) {
     bot.sendMessage(chatId, "❌ Только администратор может изменять расписание");
     return;
@@ -175,7 +180,7 @@ const scheduleDaily = () => {
   let text = `☀️ Доброе утро! Расписание на сегодня (${weekName} неделя):\n\n`;
   text += getDaySchedule(today, weekType);
 
-  bot.sendMessage(groupChatId, text); // рассылка только в основной группе
+  bot.sendMessage(groupChatId, text);
 };
 
 // Таймер на 8:00 утра
