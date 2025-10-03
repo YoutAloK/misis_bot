@@ -27,12 +27,25 @@ function isOddWeek() {
   return week % 2 !== 0;
 }
 
-// ===== Красивое расписание на день =====
+// ===== Красивое расписание на день с динамическим переносом =====
 function getDaySchedule(dayName, weekType) {
+  const maxLineLength = 40; // максимальная длина строки для одной пары
   if (schedule[weekType][dayName] && schedule[weekType][dayName].length > 0) {
     let text = `📌 ${dayName}:\n`;
     schedule[weekType][dayName].forEach((pair, i) => {
-      text += `   ${i+1}) ${pair}\n`;
+      const words = pair.split(" ");
+      let line = "";
+      let formattedPair = "";
+      words.forEach(word => {
+        if ((line + word).length > maxLineLength) {
+          formattedPair += line + "\n      ";
+          line = word + " ";
+        } else {
+          line += word + " ";
+        }
+      });
+      formattedPair += line.trim();
+      text += `   ${i+1}) ${formattedPair}\n`;
     });
     return text;
   } else {
@@ -77,7 +90,6 @@ bot.onText(/\/groupid/, (msg) => {
 bot.onText(/\/расписание/, (msg) => {
   const chatId = msg.chat.id;
 
-  // Проверяем, что команда пришла из основной группы
   if (chatId !== groupChatId) return;
 
   const weekType = isOddWeek() ? "odd" : "even";
@@ -134,7 +146,6 @@ bot.on("message", (msg) => {
     });
   }
 
-  // Изменение и удаление через текстовый формат
   if (msg.text === "✏️ Изменить пару") {
     bot.sendMessage(chatId, "Формат изменения: день; номер пары; новое значение; odd/even");
   }
@@ -154,7 +165,7 @@ bot.on("callback_query", (query) => {
 
   if (query.data.startsWith("add_")) {
     const day = query.data.replace("add_", "");
-    bot.sendMessage(chatId, `✍️ Введи пару для ${day}.\nФормат: "Название пары ВРЕМЯ odd/even" (пример: Математика 10:00 odd)`);
+    bot.sendMessage(chatId, `✍️ Введи пару для ${day}.\nФормат: "Название пары ВРЕМЯ odd/even"`);
 
     bot.once("message", (reply) => {
       const parts = reply.text.split(" ");
